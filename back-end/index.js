@@ -5,22 +5,19 @@
 
 // create first server
 
-
 import express from "express";
 import multer from "multer";
 import path from "path";
 import { fileURLToPath } from "url";
 import fs from "fs";
+
 const app = express(); // express object
 
+
+const __filename=fileURLToPath(import.meta.url); // current file path --> C:/.../.../back-end/index.js
+const __dirname=path.dirname(__filename); // get directory -->C://..../...back-end
+
 app.use(express.json());// use json middle ware
-
-
-//get file path
-
-const __filename = fileURLToPath(import.meta.url); // current run file full path c:/reactnative/../back-end/index.js
-const __dirname = path.dirname(__filename); // index.js ---->back-end
-
 
 
 
@@ -37,7 +34,8 @@ const storage = multer.diskStorage({
     filename: (req, file, call) => {
 
         // image filename can change use path
-        call(null, file.originalname);
+        call(null,file.originalname); // don't need manually -->original name--> userId.png
+
 
     }
 
@@ -65,47 +63,58 @@ app.post("/api/v1/upload", upload.single("image"), (req, res) => {
 }); // create api handle post request reposne
 
 
-app.get("/api/v1/viewImage", (req, res) => {
 
-    const fullpath = path.join(__dirname, "assets");
-    const userID = req.query.id;
+// app.use prefix  access static content
 
-    try {
+app.use("/assets",express.static(path.join(__dirname,"assets")));
+app.get("/api/v1/imageView",(req,res)=>{
+   const userId=req.query.id;
+   // need file path image upload
+   const imageFilePath=path.join(__dirname,"assets"); // path can join c:/.../../back-end/assets/
 
-        const image = fs.readdirSync(fullpath).find(file => {
+   // check image have a directory
+   // fs --> node file system module
+   try {
+   const image= fs.readdirSync(imageFilePath).find((file)=>{ // assets directory all files get
 
-            const imageObject = path.parse(file);
+        const imageObject=path.parse(file); // file separate
 
-            if (imageObject.name == userID) {
-                return imageObject.base;
+        if (imageObject) {
 
+            if (imageObject.name==userId) { // imageObject.name -->image file name -->12345.png-->12345 equals userId
+                
+                return imageObject.base; //image file eka 12345.jpeg
             }
-            return;
 
+          
 
-        });
-
-        if (image) {
-            res.json({
-                imageUrl: `${req.protocol}://${req.host}/assets/${image}`,
-            });
-
-        } else {
-
-            res.status(404).json({
-                message: "Image not found",
-            });
         }
 
 
-    } catch (error) {
-        console.error(error);
+    });
+
+    if (image) {
+        
+        res.json({
+            imageUrl:`${req.protocol}://${req.host}/assets/${image}`,
+        });
+    }else{
+
+        res.status(404).json({
+            message:"Image not found...",
+        });
     }
 
-});
 
 
+    
+   } catch (error) {
+    console.error(error);
+    
+   }
 
+    
+})
 
 
 app.listen(3000, (error) => {
